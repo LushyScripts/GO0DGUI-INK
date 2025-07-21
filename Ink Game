@@ -1,0 +1,305 @@
+-- GO0DGUI Script for Ink Game (Roblox) with Delta Executor (Mobile Optimized)
+-- Features: Speed Hacks, Fly, Aura Fling, Glass Bridge ESP, Toggleable GUI
+-- Use at your own risk: Exploiting violates Roblox ToS
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GO0DGUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Main Frame
+local Frame = Instance.new("Frame")
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Position = UDim2.new(0.05, 0, 0.1, 0) -- Adjusted for mobile
+Frame.Size = UDim2.new(0, 200, 0, 280) -- Smaller for mobile
+Frame.Active = true
+Frame.Draggable = true
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = Frame
+
+local Title = Instance.new("TextLabel")
+Title.Parent = Frame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 0, 0, 5)
+Title.Size = UDim2.new(1, 0, 0, 25)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "GO0DGUI - Ink Game"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.TextScaled = true
+
+-- Toggle Button (Floating)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Position = UDim2.new(0.9, -40, 0.05, 0) -- Top-right corner
+ToggleButton.Size = UDim2.new(0, 40, 0, 40)
+ToggleButton.Font = Enum.Font.Gotham
+ToggleButton.Text = "☰"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 20
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 10)
+ToggleCorner.Parent = ToggleButton
+
+local guiVisible = true
+ToggleButton.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    Frame.Visible = guiVisible
+    ToggleButton.Text = guiVisible and "☰" or "▶"
+end)
+
+-- Button Creation Function
+local function CreateButton(name, position, callback)
+    local Button = Instance.new("TextButton")
+    Button.Parent = Frame
+    Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Button.BorderSizePixel = 0
+    Button.Position = position
+    Button.Size = UDim2.new(0, 170, 0, 35) -- Smaller buttons for mobile
+    Button.Font = Enum.Font.Gotham
+    Button.Text = name
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 12
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 8)
+    ButtonCorner.Parent = Button
+    Button.MouseButton1Click:Connect(callback)
+    return Button
+end
+
+-- Variables for Toggles
+local speedEnabled = false
+local flyEnabled = false
+local flingEnabled = false
+local espEnabled = false
+local defaultWalkSpeed = 16
+local hackWalkSpeed = 50
+local flySpeed = 100 -- Reduced for mobile performance
+local espHighlights = {}
+
+-- Speed Hack
+local function ToggleSpeed()
+    speedEnabled = not speedEnabled
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = speedEnabled and hackWalkSpeed or defaultWalkSpeed
+    end
+    SpeedButton.Text = speedEnabled and "Speed Hack: ON" or "Speed Hack: OFF"
+end
+
+-- Fly Script
+local function Fly()
+    local torso = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not torso then return end
+    local bg = Instance.new("BodyGyro", torso)
+    bg.P = 9e4
+    bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bg.cframe = torso.CFrame
+    local bv = Instance.new("BodyVelocity", torso)
+    bv.velocity = Vector3.new(0, 0.1, 0)
+    bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+    local ctrl = {f = 0, b = 0, l = 0, r = 0}
+    local lastctrl = {f = 0, b = 0, l = 0, r = 0}
+    local speed = 0
+    local maxspeed = flySpeed
+
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not flyEnabled then
+            bg:Destroy()
+            bv:Destroy()
+            LocalPlayer.Character.Humanoid.PlatformStand = false
+            connection:Disconnect()
+            return
+        end
+        LocalPlayer.Character.Humanoid.PlatformStand = true
+        if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
+            speed = speed + 0.5 + (speed / maxspeed)
+            if speed > maxspeed then
+                speed = maxspeed
+            end
+        elseif not (ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0) and speed ~= 0 then
+            speed = speed - 1
+            if speed < 0 then
+                speed = 0
+            end
+        end
+        if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
+            bv.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (ctrl.f + ctrl.b)) + 
+                          ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(ctrl.l + ctrl.r, (ctrl.f + ctrl.b) * 0.2, 0).p) - 
+                          workspace.CurrentCamera.CoordinateFrame.p)) * speed
+            lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
+        elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 and speed ~= 0 then
+            bv.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (lastctrl.f + lastctrl.b)) + 
+                          ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lastctrl.l + lastctrl.r, (lastctrl.f + lastctrl.b) * 0.2, 0).p) - 
+                          workspace.CurrentCamera.CoordinateFrame.p)) * speed
+        else
+            bv.velocity = Vector3.new(0, 0.1, 0)
+        end
+        bg.cframe = workspace.CurrentCamera.CoordinateFrame * CFrame.Angles(-math.rad((ctrl.f + ctrl.b) * 50 * speed / maxspeed), 0, 0)
+    end)
+
+    -- Mobile touch controls for fly
+    local touchConnection
+    touchConnection = UserInputService.TouchMoved:Connect(function(touch, gameProcessedEvent)
+        if not flyEnabled or gameProcessedEvent then return end
+        local camera = workspace.CurrentCamera
+        local direction = (camera.CoordinateFrame.lookVector * Vector3.new(0, 0, 1)).Unit
+        local right = (camera.CoordinateFrame * CFrame.new(1, 0, 0)).p - camera.CoordinateFrame.p
+        if touch.Position.Y < workspace.CurrentCamera.ViewportSize.Y / 2 then
+            ctrl.f = 1
+            ctrl.b = 0
+        else
+            ctrl.f = 0
+            ctrl.b = -1
+        end
+        if touch.Position.X < workspace.CurrentCamera.ViewportSize.X / 2 then
+            ctrl.l = -1
+            ctrl.r = 0
+        else
+            ctrl.l = 0
+            ctrl.r = 1
+        end
+    end)
+
+    UserInputService.TouchEnded:Connect(function(touch, gameProcessedEvent)
+        if not flyEnabled or gameProcessedEvent then return end
+        ctrl.f = 0
+        ctrl.b = 0
+        ctrl.l = 0
+        ctrl.r = 0
+    end)
+end
+
+local function ToggleFly()
+    flyEnabled = not flyEnabled
+    FlyButton.Text = flyEnabled and "Fly: ON" or "Fly: OFF"
+    if flyEnabled then
+        Fly()
+    end
+end
+
+-- Aura Fling
+local function AuraFling()
+    local flingConnection
+    flingConnection = RunService.Heartbeat:Connect(function()
+        if not flingEnabled then
+            flingConnection:Disconnect()
+            return
+        end
+        local character = LocalPlayer.Character
+        if not character then return end
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player == LocalPlayer then continue end
+            local targetChar = player.Character
+            if not targetChar then continue end
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            if not targetRoot then continue end
+            local distance = (rootPart.Position - targetRoot.Position).Magnitude
+            if distance < 8 then -- Reduced range for mobile
+                targetRoot.Velocity = Vector3.new(0, 80, 0) -- Adjusted for mobile
+                targetRoot.CFrame = targetRoot.CFrame + Vector3.new(math.random(-40, 40), 40, math.random(-40, 40))
+            end
+        end
+    end)
+end
+
+local function ToggleFling()
+    flingEnabled = not flingEnabled
+    FlingButton.Text = flingEnabled and "Aura Fling: ON" or "Aura Fling: OFF"
+    if flingEnabled then
+        AuraFling()
+    end
+end
+
+-- Glass Bridge ESP
+local function GlassBridgeESP()
+    local function ClearESP()
+        for _, highlight in pairs(espHighlights) do
+            highlight:Destroy()
+        end
+        espHighlights = {}
+    end
+
+    local function ApplyESP()
+        ClearESP()
+        if not espEnabled then return end
+
+        local glassFolder = Workspace:FindFirstChild("GlassBridge") or Workspace
+        for _, part in ipairs(glassFolder:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name:lower():find("glass") then
+                local isSafe = part.Transparency == 0 or part:FindFirstChild("Safe") or part.BrickColor == BrickColor.new("Lime green")
+                if isSafe then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Parent = part
+                    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    highlight.FillTransparency = 0.6 -- Increased transparency for mobile
+                    highlight.OutlineTransparency = 0
+                    table.insert(espHighlights, highlight)
+                end
+            end
+        end
+    end
+
+    local espConnection
+    if espEnabled then
+        ApplyESP()
+        espConnection = RunService.RenderStepped:Connect(function()
+            if not espEnabled then
+                espConnection:Disconnect()
+                ClearESP()
+                return
+            end
+            ApplyESP()
+        end)
+    end
+end
+
+local function ToggleESP()
+    espEnabled = not espEnabled
+    ESPButton.Text = espEnabled and "Glass Bridge ESP: ON" or "Glass Bridge ESP: OFF"
+    if espEnabled then
+        GlassBridgeESP()
+    else
+        for _, highlight in pairs(espHighlights) do
+            highlight:Destroy()
+        end
+        espHighlights = {}
+    end
+end
+
+-- Create Buttons
+local SpeedButton = CreateButton("Speed Hack: OFF", UDim2.new(0, 15, 0, 40), ToggleSpeed)
+local FlyButton = CreateButton("Fly: OFF", UDim2.new(0, 15, 0, 85), ToggleFly)
+local FlingButton = CreateButton("Aura Fling: OFF", UDim2.new(0, 15, 0, 130), ToggleFling)
+local ESPButton = CreateButton("Glass Bridge ESP: OFF", UDim2.new(0, 15, 0, 175), ToggleESP)
+
+-- Initialize
+local function Initialize()
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        defaultWalkSpeed = humanoid.WalkSpeed
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(Initialize)
+Initialize()
+
+-- Warning Message
+print("GO0DGUI Loaded. Use at your own risk. Roblox ToS violations may lead to bans.")
